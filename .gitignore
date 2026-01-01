@@ -25,3 +25,5 @@ vite.config.ts.timestamp-*
 # App
 cache/
 repos/
+*.log
+user_activity.log
