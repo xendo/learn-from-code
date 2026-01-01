@@ -1,0 +1,385 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import type { Curriculum } from "$lib/types";
+  import LessonView from "$lib/components/LessonView.svelte";
+
+  interface RecentProject {
+    projectName: string;
+    description: string;
+    repoUrl: string;
+    timestamp: string;
+  }
+
+  let repoUrl = $state("");
+  let isGenerating = $state(false);
+  let fileTree = $state<any[]>([]);
+  let curriculum = $state<Curriculum | null>(null);
+  let recentProjects = $state<RecentProject[]>([]);
+
+  onMount(async () => {
+    fetchRecent();
+  });
+
+  async function fetchRecent() {
+    try {
+      const resp = await fetch("/api/recent");
+      const data = await resp.json();
+      recentProjects = data.projects || [];
+    } catch (e) {
+      console.error("Failed to fetch recent:", e);
+    }
+  }
+
+  async function handleGenerate(url?: string) {
+    const targetUrl = url || repoUrl;
+    if (!targetUrl) return;
+
+    isGenerating = true;
+    curriculum = null;
+    fileTree = [];
+    try {
+      const resp = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl: targetUrl }),
+      });
+
+      if (resp.status === 429) {
+        throw new Error(
+          'Daily API limit reached (Showcase Tier). Please try one of the "Recent Explorations" below or come back tomorrow!',
+        );
+      }
+
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+
+      curriculum = data.curriculum;
+      fileTree = data.fileTree;
+      fetchRecent(); // Refresh recent list
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      isGenerating = false;
+    }
+  }
+</script>
+
+<div class="container landing">
+  <header class="hero">
+    <h1>Learn from Code</h1>
+    <p>Turn any GitHub repository into a step-by-step learning journey.</p>
+  </header>
+
+  <section class="card url-input">
+    <input
+      type="text"
+      bind:value={repoUrl}
+      placeholder="https://github.com/user/repo"
+      class="input-field"
+    />
+    <div
+      class="button-wrapper"
+      data-tooltip="Showcase Tier: Limited to ~20 gens/day."
+    >
+      <button
+        class="btn-primary"
+        onclick={() => handleGenerate()}
+        disabled={isGenerating}
+      >
+        {isGenerating ? "Generating..." : "Analyze Project"}
+      </button>
+    </div>
+  </section>
+
+  {#if !curriculum && recentProjects.length > 0}
+    <section class="recent-explorations">
+      <div class="section-header">
+        <h2>Recent Explorations</h2>
+        <p>Jump back into previously analyzed projects.</p>
+      </div>
+      <div class="recent-grid">
+        {#each recentProjects as project}
+          <button
+            class="card recent-card"
+            onclick={() => handleGenerate(project.repoUrl)}
+          >
+            <h3>{project.projectName}</h3>
+            <p>{project.description}</p>
+            <span class="repo-link">{project.repoUrl}</span>
+          </button>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  {#if curriculum}
+    <main class="curriculum-view">
+      <section class="card overview">
+        <h2>{curriculum.projectName}</h2>
+        <p>{curriculum.description}</p>
+        <div class="patterns">
+          <h3>Core Coding Patterns</h3>
+          <div class="tag-cloud">
+            {#each curriculum.patterns as pattern}
+              <span class="tag">{pattern}</span>
+            {/each}
+          </div>
+        </div>
+      </section>
+
+      <section class="lessons">
+        {#each curriculum.lessons as lesson}
+          <LessonView {lesson} />
+        {/each}
+      </section>
+    </main>
+  {/if}
+
+  {#if fileTree.length > 0}
+    <section class="card results">
+      <h2>Project Taxonomy</h2>
+      <div class="tree-preview">
+        <ul>
+          {#each fileTree as node}
+            <li>
+              <span class="icon">{node.isDirectory ? "📁" : "📄"}</span>
+              {node.name}
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </section>
+  {/if}
+</div>
+
+<style>
+  .landing {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    padding-top: 3rem;
+    padding-bottom: 5rem;
+  }
+
+  header {
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 1.125rem;
+  }
+
+  .url-input {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .url-input input {
+    flex: 1;
+  }
+
+  .curriculum-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .overview h2 {
+    margin-top: 0;
+  }
+
+  .patterns {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .tag {
+    background: #eff6ff;
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .lessons {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .tree-preview {
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+
+  ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  li {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .icon {
+    opacity: 0.6;
+  }
+
+  /* Recent Explorations */
+  .recent-explorations {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .recent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .recent-card {
+    text-align: left;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+  }
+
+  .recent-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    border-color: var(--primary);
+  }
+
+  .recent-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+  }
+
+  .hero p {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  .preview-notice {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.2);
+    padding: 0.75rem 1.25rem;
+    border-radius: 99px;
+    margin-bottom: 2rem;
+  }
+
+  .preview-notice p {
+    font-size: 0.875rem;
+    color: #854d0e;
+    margin: 0;
+  }
+
+  .badge {
+    background: #eab308;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .recent-card p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .repo-link {
+    font-size: 0.75rem;
+    color: var(--primary);
+    opacity: 0.8;
+    word-break: break-all;
+  }
+
+  /* Tooltip Styles */
+  .button-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .button-wrapper:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 0.75rem;
+    background: #334155;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    animation: fadeInTooltip 0.2s forwards;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+
+  .button-wrapper:hover::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 0.25rem;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #334155 transparent transparent transparent;
+    opacity: 0;
+    animation: fadeInTooltip 0.2s forwards;
+    pointer-events: none;
+  }
+
+  @keyframes fadeInTooltip {
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+</style>
