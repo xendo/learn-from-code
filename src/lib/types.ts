@@ -35,6 +35,7 @@ export type Lesson = {
 export type Curriculum = {
   projectName: string;
   description: string;
+  repoUrl?: string;
   patterns: string[];
   lessons: Lesson[];
 };

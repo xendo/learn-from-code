@@ -4,7 +4,7 @@ import { scanDirectory } from '$lib/analysis/scanner';
 import { generateCurriculum } from '$lib/curriculum/generator';
 import { getCachedCurriculum, setCachedCurriculum } from '$lib/curriculum/cache';
 
-export const POST = async ({ request }) => {
+export const POST = async ({ request, locals }) => {
     const { repoUrl } = await request.json();
 
     if (!repoUrl) {
@@ -21,7 +21,14 @@ export const POST = async ({ request }) => {
         if (cached) {
             console.log('Serving from cache:', repoUrl, commitHash);
             const fileTree = scanDirectory(repoPath);
+            if (!cached.repoUrl) cached.repoUrl = repoUrl;
             return json({ curriculum: cached, fileTree, fromCache: true });
+        }
+
+        // Require Authentication for new generation
+        const session = await locals.auth();
+        if (!session) {
+            return json({ error: 'You must be signed in to generate new curriculums.' }, { status: 401 });
         }
 
         const fileTree = scanDirectory(repoPath);

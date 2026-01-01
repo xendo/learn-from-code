@@ -94,7 +94,9 @@ export async function generateCurriculum(repoPath: string, repoUrl: string): Pro
 
     // Clean up potential markdown formatting in the response
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(jsonStr) as Curriculum;
+    const curriculum = JSON.parse(jsonStr) as Curriculum;
+    curriculum.repoUrl = repoUrl;
+    return curriculum;
   } catch (error) {
     console.error('Error generating curriculum:', error);
     throw new Error('Failed to generate curriculum via AI');

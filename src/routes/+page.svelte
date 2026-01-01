@@ -10,14 +10,38 @@
     timestamp: string;
   }
 
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
+  import { signIn, signOut } from "@auth/sveltekit/client";
+
+  // ... (RecentProject interface)
+
   let repoUrl = $state("");
   let isGenerating = $state(false);
   let fileTree = $state<any[]>([]);
   let curriculum = $state<Curriculum | null>(null);
   let recentProjects = $state<RecentProject[]>([]);
 
+  // Reactive derived state for the current project in URL
+  let projectParam = $derived($page.url.searchParams.get("project"));
+  let session = $derived($page.data.session);
+
   onMount(async () => {
     fetchRecent();
+  });
+
+  // Effect to handle URL changes (Navigation)
+  $effect(() => {
+    if (projectParam) {
+      // user navigated to a project
+      if (!curriculum || curriculum.repoUrl !== projectParam) {
+        loadProject(projectParam);
+      }
+    } else {
+      // user navigated to home (clearing project)
+      curriculum = null;
+      fileTree = [];
+    }
   });
 
   async function fetchRecent() {
@@ -30,18 +54,28 @@
     }
   }
 
-  async function handleGenerate(url?: string) {
+  // Interaction just updates the URL
+  function handleGenerate(url?: string) {
     const targetUrl = url || repoUrl;
     if (!targetUrl) return;
 
+    // Push new state to history
+    goto(`?project=${encodeURIComponent(targetUrl)}`);
+  }
+
+  // The actual logic moved to loadProject
+  async function loadProject(url: string) {
     isGenerating = true;
+    // Don't clear state immediately to avoid flashing if switching projects?
+    // Actually, clearing is good to show loading state.
     curriculum = null;
     fileTree = [];
+
     try {
       const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoUrl: targetUrl }),
+        body: JSON.stringify({ repoUrl: url }),
       });
 
       if (resp.status === 429) {
@@ -50,14 +84,29 @@
         );
       }
 
+      if (resp.status === 401) {
+        if (
+          confirm(
+            "You must be signed in to generate new curriculums. Sign in now?",
+          )
+        ) {
+          signIn("github");
+        }
+        return;
+      }
+
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
 
       curriculum = data.curriculum;
       fileTree = data.fileTree;
+      // Sync input field if loaded from URL
+      repoUrl = url;
       fetchRecent(); // Refresh recent list
     } catch (e: any) {
       alert("Error: " + e.message);
+      // If error, maybe go back to home? Or stay here?
+      // Staying allows user to modify URL or see error.
     } finally {
       isGenerating = false;
     }
@@ -66,8 +115,25 @@
 
 <div class="container landing">
   <header class="hero">
-    <h1>Learn from Code</h1>
+    <h1 class="logo" onclick={() => goto("/")}>Learn from Code</h1>
     <p>Turn any GitHub repository into a step-by-step learning journey.</p>
+
+    <div class="auth-actions">
+      {#if session}
+        <div class="user-info">
+          <img
+            src={session.user?.image}
+            alt={session.user?.name}
+            class="avatar"
+          />
+          <button class="btn-text" onclick={() => signOut()}>Sign Out</button>
+        </div>
+      {:else}
+        <button class="btn-secondary" onclick={() => signIn("github")}
+          >Sign In with GitHub</button
+        >
+      {/if}
+    </div>
   </header>
 
   <section class="card url-input">
@@ -90,27 +156,6 @@
       </button>
     </div>
   </section>
-
-  {#if !curriculum && recentProjects.length > 0}
-    <section class="recent-explorations">
-      <div class="section-header">
-        <h2>Recent Explorations</h2>
-        <p>Jump back into previously analyzed projects.</p>
-      </div>
-      <div class="recent-grid">
-        {#each recentProjects as project}
-          <button
-            class="card recent-card"
-            onclick={() => handleGenerate(project.repoUrl)}
-          >
-            <h3>{project.projectName}</h3>
-            <p>{project.description}</p>
-            <span class="repo-link">{project.repoUrl}</span>
-          </button>
-        {/each}
-      </div>
-    </section>
-  {/if}
 
   {#if curriculum}
     <main class="curriculum-view">
@@ -150,6 +195,27 @@
       </div>
     </section>
   {/if}
+
+  {#if recentProjects.length > 0}
+    <section class="recent-explorations">
+      <div class="section-header">
+        <h2>{curriculum ? "Explore Other Projects" : "Recent Explorations"}</h2>
+        <p>Jump back into previously analyzed projects.</p>
+      </div>
+      <div class="recent-grid">
+        {#each recentProjects as project}
+          <button
+            class="card recent-card"
+            onclick={() => handleGenerate(project.repoUrl)}
+          >
+            <h3>{project.projectName}</h3>
+            <p>{project.description}</p>
+            <span class="repo-link">{project.repoUrl}</span>
+          </button>
+        {/each}
+      </div>
+    </section>
+  {/if}
 </div>
 
 <style>
@@ -168,6 +234,10 @@
   header h1 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
+  }
+
+  .logo {
+    cursor: pointer;
   }
 
   .subtitle {
@@ -287,6 +357,50 @@
     font-size: 1.25rem;
     color: var(--text-muted);
     margin-bottom: 2rem;
+  }
+
+  .auth-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .btn-text:hover {
+    color: var(--primary);
+    text-decoration: underline;
+  }
+
+  .btn-secondary {
+    background: white;
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .btn-secondary:hover {
+    background: #f8fafc;
   }
 
   .preview-notice {

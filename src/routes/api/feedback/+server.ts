@@ -4,7 +4,11 @@ import { env } from '$env/dynamic/private';
 
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || '');
 
-export async function POST({ request }) {
+export async function POST({ request, locals }) {
+    const session = await locals.auth();
+    if (!session) {
+        return json({ feedback: 'Please sign in to get AI Tutor feedback.' }, { status: 401 });
+    }
     const { exerciseTitle, exerciseDescription, userCode, errorOutput, language } = await request.json();
 
     if (!env.GEMINI_API_KEY) {
