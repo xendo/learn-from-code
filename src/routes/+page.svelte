@@ -18,6 +18,8 @@
 
   let repoUrl = $state("");
   let isGenerating = $state(false);
+  let loadingStatus = $state("");
+  let activeError = $state<string | null>(null);
   let fileTree = $state<any[]>([]);
   let curriculum = $state<Curriculum | null>(null);
   let recentProjects = $state<RecentProject[]>([]);
@@ -66,8 +68,8 @@
   // The actual logic moved to loadProject
   async function loadProject(url: string) {
     isGenerating = true;
-    // Don't clear state immediately to avoid flashing if switching projects?
-    // Actually, clearing is good to show loading state.
+    loadingStatus = "Initializing...";
+    activeError = null;
     curriculum = null;
     fileTree = [];
 
@@ -78,37 +80,71 @@
         body: JSON.stringify({ repoUrl: url }),
       });
 
-      if (resp.status === 429) {
-        throw new Error(
-          'Daily API limit reached (Showcase Tier). Please try one of the "Recent Explorations" below or come back tomorrow!',
-        );
-      }
+      if (!resp.body) throw new Error("No response body");
 
-      if (resp.status === 401) {
-        if (
-          confirm(
-            "You must be signed in to generate new curriculums. Sign in now?",
-          )
-        ) {
-          signIn("github");
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        // Keep the last part if incomplete
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const data = JSON.parse(line);
+            console.log("Stream chunk:", data);
+
+            if (data.status) {
+              loadingStatus = data.status;
+            } else if (data.error) {
+              // Handle structured error
+              if (data.code === 401) {
+                activeError = "Sign in required to generate new curriculums.";
+                // Optionally trigger sign-in flow here or let user click button
+                return;
+              }
+              throw new Error(data.error);
+            } else if (data.curriculum) {
+              // Final payload
+              curriculum = data.curriculum;
+              fileTree = data.fileTree;
+              repoUrl = url;
+              fetchRecent();
+            }
+          } catch (err) {
+            console.warn("Stream parse error", err, line);
+          }
         }
-        return;
       }
 
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-
-      curriculum = data.curriculum;
-      fileTree = data.fileTree;
-      // Sync input field if loaded from URL
-      repoUrl = url;
-      fetchRecent(); // Refresh recent list
+      // Process any remaining buffer content
+      if (buffer.trim()) {
+        try {
+          const data = JSON.parse(buffer);
+          if (data.curriculum) {
+            curriculum = data.curriculum;
+            fileTree = data.fileTree;
+            repoUrl = url;
+            fetchRecent();
+          }
+        } catch (e) {
+          console.warn("Final buffer parse error", e);
+        }
+      }
     } catch (e: any) {
-      alert("Error: " + e.message);
-      // If error, maybe go back to home? Or stay here?
-      // Staying allows user to modify URL or see error.
+      activeError = e.message;
     } finally {
       isGenerating = false;
+      loadingStatus = "";
     }
   }
 </script>
@@ -152,10 +188,19 @@
         onclick={() => handleGenerate()}
         disabled={isGenerating}
       >
-        {isGenerating ? "Generating..." : "Analyze Project"}
+        {isGenerating ? loadingStatus || "Generating..." : "Analyze Project"}
       </button>
     </div>
   </section>
+
+  {#if activeError}
+    <div class="error-banner">
+      <p>{activeError}</p>
+      {#if activeError.includes("Sign in")}
+        <button onclick={() => signIn("github")}>Sign In</button>
+      {/if}
+    </div>
+  {/if}
 
   {#if curriculum}
     <main class="curriculum-view">
@@ -238,11 +283,6 @@
 
   .logo {
     cursor: pointer;
-  }
-
-  .subtitle {
-    color: var(--text-muted);
-    font-size: 1.125rem;
   }
 
   .url-input {
@@ -403,35 +443,6 @@
     background: #f8fafc;
   }
 
-  .preview-notice {
-    display: inline-flex;
-    align-items: center;
-    gap: 1rem;
-    background: rgba(234, 179, 8, 0.1);
-    border: 1px solid rgba(234, 179, 8, 0.2);
-    padding: 0.75rem 1.25rem;
-    border-radius: 99px;
-    margin-bottom: 2rem;
-  }
-
-  .preview-notice p {
-    font-size: 0.875rem;
-    color: #854d0e;
-    margin: 0;
-  }
-
-  .badge {
-    background: #eab308;
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.25rem 0.75rem;
-    border-radius: 99px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-  }
-
   .recent-card p {
     font-size: 0.875rem;
     color: var(--text-muted);
@@ -495,5 +506,25 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+  }
+
+  .error-banner {
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    color: #991b1b;
+    padding: 1rem;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .error-banner button {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
   }
 </style>

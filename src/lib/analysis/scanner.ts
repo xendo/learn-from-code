@@ -42,3 +42,15 @@ export function getFileContent(baseDir: string, relativePath: string): string {
     const fullPath = path.join(baseDir, relativePath);
     return fs.readFileSync(fullPath, 'utf-8');
 }
+
+export function flattenFileTree(nodes: FileNode[]): string[] {
+    let paths: string[] = [];
+    for (const node of nodes) {
+        if (node.isDirectory && node.children) {
+            paths = paths.concat(flattenFileTree(node.children));
+        } else if (!node.isDirectory) {
+            paths.push(node.path);
+        }
+    }
+    return paths;
+}

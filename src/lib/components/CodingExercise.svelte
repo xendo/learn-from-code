@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { CodingExercise } from "$lib/types";
+    import { getRuntime, isLanguageSupported } from "$lib/runtime/registry";
 
     let { exercise }: { exercise: CodingExercise } = $props();
 
@@ -10,113 +11,72 @@
     );
     let aiHint = $state("");
     let analyzingError = $state(false);
-    let pyodide: any = null;
-
-    async function loadPyodide() {
-        if (pyodide) return;
-        status = "loading";
-        output = [...output, "📦 Loading Python runtime (Pyodide)..."];
-
-        if (!(window as any).loadPyodide) {
-            const script = document.createElement("script");
-            script.src =
-                "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
-            document.head.appendChild(script);
-            await new Promise((resolve) => (script.onload = resolve));
-        }
-
-        pyodide = await (window as any).loadPyodide();
-        await pyodide.loadPackage("numpy");
-        output = [...output, "✅ Python runtime ready (with NumPy)."];
-        status = "idle";
-    }
 
     async function runCode() {
         output = [];
         status = "running";
 
-        if (exercise.language === "python") {
-            try {
-                await loadPyodide();
-                status = "running";
-
-                // Redirect stdout
-                pyodide.setStdout({
-                    batched: (text: string) => {
-                        output = [...output, text];
-                    },
-                });
-
-                await pyodide.runPythonAsync(
-                    userCode + "\n" + exercise.validationScript,
-                );
-                status = "success";
-                output = [...output, "✅ All Python tests passed!"];
-            } catch (e: any) {
-                status = "error";
-                let errorMsg = e.message;
-                if (errorMsg.includes("AssertionError")) {
-                    errorMsg = "Test Failed: The solution incorrect.";
-                    output = [...output, "❌ " + errorMsg];
-                } else {
-                    output = [...output, `❌ Error: ${errorMsg}`];
-                }
-
-                // Get AI Feedback
-                analyzingError = true;
-                aiHint = "";
-                try {
-                    const response = await fetch("/api/feedback", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            exerciseTitle: exercise.title,
-                            exerciseDescription: exercise.description,
-                            userCode,
-                            errorOutput: e.message,
-                            language: exercise.language,
-                        }),
-                    });
-                    const data = await response.json();
-                    if (data.feedback) {
-                        aiHint = data.feedback;
-                    }
-                } catch (apiErr) {
-                    console.error("Feedback API error", apiErr);
-                } finally {
-                    analyzingError = false;
-                }
-            }
+        const runtime = getRuntime(exercise.language);
+        if (!runtime) {
+            status = "error";
+            output = [
+                `❌ Execution failed: No runtime found for '${exercise.language}'`,
+            ];
             return;
         }
 
-        // JavaScript logic...
-        const originalLog = console.log;
-        console.log = (...args) => {
-            output = [
-                ...output,
-                args
-                    .map((arg) =>
-                        typeof arg === "object"
-                            ? JSON.stringify(arg)
-                            : String(arg),
-                    )
-                    .join(" "),
-            ];
-        };
-
         try {
-            const sandbox = new Function(
-                userCode + "\n" + exercise.validationScript,
+            if (runtime.load) {
+                status = "loading";
+                output = [
+                    ...output,
+                    `📦 Loading ${exercise.language} runtime...`,
+                ];
+                await runtime.load();
+            }
+
+            status = "running";
+            const result = await runtime.run(
+                userCode,
+                exercise.validationScript,
             );
-            sandbox();
-            status = "success";
-            output = [...output, "✅ All JavaScript tests passed!"];
+
+            output = [...output, ...result.output];
+            status = result.success ? "success" : "error";
+
+            if (!result.success && result.error) {
+                output = [...output, `❌ ${result.error}`];
+                await getAiFeedback(result.error);
+            }
         } catch (e: any) {
             status = "error";
-            output = [...output, `❌ Error: ${e.message}`];
+            output = [...output, `❌ Runtime Logic Error: ${e.message}`];
+        }
+    }
+
+    async function getAiFeedback(errorMsg: string) {
+        analyzingError = true;
+        aiHint = "";
+        try {
+            const response = await fetch("/api/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    exerciseTitle: exercise.title,
+                    exerciseDescription: exercise.description,
+                    userCode,
+                    errorOutput: errorMsg,
+                    language: exercise.language,
+                }),
+            });
+            const data = await response.json();
+            if (data.feedback) {
+                aiHint = data.feedback;
+            }
+        } catch (apiErr) {
+            console.error("Feedback API error", apiErr);
         } finally {
-            console.log = originalLog;
+            analyzingError = false;
         }
     }
 

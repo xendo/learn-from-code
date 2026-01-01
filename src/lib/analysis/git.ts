@@ -16,11 +16,13 @@ export function cloneRepo(repoUrl: string): string {
     }
 
     try {
-        execSync(`git clone ${repoUrl} ${targetDir}`, { stdio: 'inherit' });
+        execSync(`git clone ${repoUrl} ${targetDir}`, { stdio: 'pipe' });
         return targetDir;
-    } catch (error) {
-        console.error('Failed to clone repo:', error);
-        throw new Error('Cloning failed');
+    } catch (error: any) {
+        const stderr = error.stderr ? error.stderr.toString() : '';
+        const msg = `Cloning failed: ${stderr || error.message}`;
+        console.error(msg);
+        throw new Error(msg);
     }
 }
 
