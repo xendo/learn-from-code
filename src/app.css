@@ -76,3 +76,48 @@ h4 {
   margin: 0 auto;
   padding: 2rem;
 }
+
+/* Button Variants */
+.btn-secondary {
+  background: white;
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: var(--primary);
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-text:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-state.centered {
+  justify-content: center;
+}

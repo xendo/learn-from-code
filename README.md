@@ -25,7 +25,7 @@ Stuck on a problem? The system doesn't just verify your answer—it acts as a tu
 ## Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
+- Bun (v1.0+)
 - A Gemini API Key (Get one from [Google AI Studio](https://aistudio.google.com/))
 
 ### Installation
@@ -37,7 +37,7 @@ Stuck on a problem? The system doesn't just verify your answer—it acts as a tu
 
 2. **Install dependencies**
    ```bash
-   npm install
+   bun install
    ```
 
 3. **Configure Environment**
@@ -48,7 +48,7 @@ Stuck on a problem? The system doesn't just verify your answer—it acts as a tu
 
 4. **Start the Development Server**
    ```bash
-   npm run dev
+   bun run dev
    ```
 
 5. **Open your browser** to `http://localhost:5173`
@@ -73,10 +73,10 @@ npx sv create my-app
 
 ### Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Once you've created a project and installed dependencies with `bun install`, start a development server:
 
 ```sh
-npm run dev
+bun run dev
 ```
 
 ### Building
@@ -84,7 +84,7 @@ npm run dev
 To create a production version of your app:
 
 ```sh
-npm run build
+bun run build
 ```
 
-You can preview the production build with `npm run preview`.
+You can preview the production build with `bun run preview`.

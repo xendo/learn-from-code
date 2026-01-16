@@ -15,7 +15,7 @@ export type QuizQuestion = {
 export type CodingExercise = {
   title: string;
   description: string;
-  language: 'javascript' | 'python';
+  language: 'javascript' | 'python' | 'c' | 'cpp';
   boilerplate: string;
   solution: string;
   validationScript: string;

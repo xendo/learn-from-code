@@ -18,19 +18,31 @@ export const POST = async ({ request, locals }) => {
     // IMPORTANT: Auth check must happen BEFORE streaming starts
     const session = await locals.auth();
 
+    let isStreamClosed = false;
+
     // Create a streaming response
     const stream = new ReadableStream({
+        cancel() {
+            isStreamClosed = true;
+        },
         async start(controller) {
             const encoder = new TextEncoder();
             const send = (data: any) => {
-                controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'));
+                if (isStreamClosed) return;
+                try {
+                    controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'));
+                } catch (e) {
+                    // Controller likely closed by client disconnect
+                    isStreamClosed = true;
+                    console.warn('Analysis stream failure (client likely disconnected):', e);
+                }
             };
 
             try {
                 // 1. Clone/Update repo
                 send({ status: '🔄 Cloning/Updating repository...' });
-                const repoPath = cloneRepo(repoUrl);
-                const commitHash = getLatestCommitHash(repoPath);
+                const repoPath = await cloneRepo(repoUrl);
+                const commitHash = await getLatestCommitHash(repoPath);
                 logApi('info', 'Repository cloned', { repoUrl, commitHash });
 
                 // 2. Check Cache

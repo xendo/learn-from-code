@@ -1,14 +1,17 @@
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 
-export function cloneRepo(repoUrl: string): string {
+const execAsync = promisify(exec);
+
+export async function cloneRepo(repoUrl: string): Promise<string> {
     const repoName = repoUrl.split('/').pop()?.replace('.git', '') || 'unknown';
     const targetDir = path.join(process.cwd(), 'repos', repoName);
 
     if (fs.existsSync(targetDir)) {
         try {
-            execSync('git pull', { cwd: targetDir, stdio: 'ignore' });
+            await execAsync('git pull', { cwd: targetDir });
         } catch (e) {
             console.warn('Failed to pull latest changes, using existing version.');
         }
@@ -16,7 +19,7 @@ export function cloneRepo(repoUrl: string): string {
     }
 
     try {
-        execSync(`git clone ${repoUrl} ${targetDir}`, { stdio: 'pipe' });
+        await execAsync(`git clone ${repoUrl} ${targetDir}`);
         return targetDir;
     } catch (error: any) {
         const stderr = error.stderr ? error.stderr.toString() : '';
@@ -26,9 +29,10 @@ export function cloneRepo(repoUrl: string): string {
     }
 }
 
-export function getLatestCommitHash(repoDir: string): string {
+export async function getLatestCommitHash(repoDir: string): Promise<string> {
     try {
-        return execSync('git rev-parse HEAD', { cwd: repoDir }).toString().trim();
+        const { stdout } = await execAsync('git rev-parse HEAD', { cwd: repoDir });
+        return stdout.toString().trim();
     } catch (e) {
         console.error('Failed to get commit hash:', e);
         return 'unknown';

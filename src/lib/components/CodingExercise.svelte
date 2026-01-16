@@ -1,16 +1,21 @@
 <script lang="ts">
+    import { untrack } from "svelte";
     import type { CodingExercise } from "$lib/types";
     import { getRuntime, isLanguageSupported } from "$lib/runtime/registry";
 
     let { exercise }: { exercise: CodingExercise } = $props();
 
-    let userCode = $state(exercise.boilerplate);
+    let userCode = $state(untrack(() => exercise.boilerplate));
     let output = $state<string[]>([]);
     let status = $state<"idle" | "running" | "success" | "error" | "loading">(
         "idle",
     );
     let aiHint = $state("");
     let analyzingError = $state(false);
+
+    $effect(() => {
+        userCode = exercise.boilerplate;
+    });
 
     async function runCode() {
         output = [];

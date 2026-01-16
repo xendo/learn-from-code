@@ -23,13 +23,12 @@ Run the following commands to install dependencies:
 # Update system
 apt update && apt upgrade -y
 
-# Install Node.js 20 (LTS)
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+source /root/.bashrc
 
-# Install Git and Process Manager (PM2)
+# Install Git
 apt install -y git
-npm install -g pm2
 ```
 
 ### 2.1 Create a dedicated user (Recommended)
@@ -43,8 +42,14 @@ usermod -aG sudo legit
 # Copy SSH keys from root to new user
 rsync --archive --chown=legit:legit ~/.ssh /home/legit
 
+# Install Bun for the user logic if needed, or better, make bun available globally
+# (The above link installs to ~/.bun, usually better to do per-user or move binary)
+
 # Switch to new user
 su - legit
+# Install Bun for 'legit' user
+curl -fsSL https://bun.sh/install | bash
+source ~/.bashrc
 ```
 
 
@@ -55,8 +60,8 @@ git clone https://github.com/xendo/learn-from-code.git
 cd learn-from-code
 
 # Install dependencies and Build
-npm install
-npm run build
+bun install
+bun run build
 
 # Create .env file
 nano .env
@@ -72,10 +77,18 @@ ORIGIN=https://<your-domain-or-ip>
 *(Note: `ORIGIN` and `BODY_SIZE_LIMIT` (optional) can be configured here)*
 
 ## 4. Start the Application
-Run the app using PM2 to keep it alive:
+Run the app using Bun. Since `svelte-adapter-bun` produces a standalone server:
 
 ```bash
-pm2 start build/index.js --name "learn-from-code"
+# Run directly (or use a process manager like systemd)
+bun run build/index.js
+```
+
+**Using PM2 with Bun:**
+If you still prefer PM2:
+```bash
+bun add -g pm2
+pm2 start "bun build/index.js" --name "learn-from-code"
 pm2 save
 pm2 startup
 ```
