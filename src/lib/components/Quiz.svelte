@@ -1,5 +1,9 @@
 <script lang="ts">
     import type { QuizQuestion } from "$lib/types";
+    import * as Card from "$lib/components/ui/card";
+    import { Button } from "$lib/components/ui/button";
+    import { Label } from "$lib/components/ui/label";
+    import * as RadioGroup from "$lib/components/ui/radio-group";
 
     let { quiz }: { quiz: QuizQuestion } = $props();
     let selectedOption = $state<string | null>(null);
@@ -10,101 +14,32 @@
     }
 </script>
 
-<div class="quiz-container">
-    <p class="question">{quiz.question}</p>
+<Card.Root class="my-6">
+    <Card.Header>
+        <Card.Title class="text-base font-semibold leading-relaxed">{quiz.question}</Card.Title>
+    </Card.Header>
+    <Card.Content class="space-y-4">
+        <RadioGroup.Root bind:value={selectedOption} disabled={showFeedback} class="gap-3">
+            {#each quiz.options as option}
+                <div class="flex items-center space-x-2">
+                    <RadioGroup.Item value={option} id={option} />
+                    <Label for={option} class="text-sm font-normal cursor-pointer leading-snug peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{option}</Label>
+                </div>
+            {/each}
+        </RadioGroup.Root>
 
-    <div class="options">
-        {#each quiz.options as option}
-            <button
-                class="option-btn"
-                class:selected={selectedOption === option}
-                onclick={() => !showFeedback && (selectedOption = option)}
-                disabled={showFeedback}
-            >
-                {option}
-            </button>
-        {/each}
-    </div>
+        {#if selectedOption && !showFeedback}
+            <Button size="sm" onclick={handleSubmit} class="mt-2">Check Answer</Button>
+        {/if}
 
-    {#if selectedOption && !showFeedback}
-        <button class="btn-primary" onclick={handleSubmit}>Check Answer</button>
-    {/if}
-
-    {#if showFeedback}
-        <div
-            class="feedback"
-            class:correct={selectedOption === quiz.correctAnswer}
-        >
-            <p>
-                {selectedOption === quiz.correctAnswer
-                    ? "✅ Correct!"
-                    : "❌ Incorrect."}
-                The correct answer is <strong>{quiz.correctAnswer}</strong>.
-            </p>
-            <p class="explanation">{quiz.explanation}</p>
-        </div>
-    {/if}
-</div>
-
-<style>
-    .quiz-container {
-        background: #f1f5f9;
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1.5rem 0;
-    }
-
-    .question {
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .options {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .option-btn {
-        text-align: left;
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--border-color);
-        background: white;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .option-btn:hover:not(:disabled) {
-        border-color: var(--primary);
-        background: #f8fafc;
-    }
-
-    .option-btn.selected {
-        border-color: var(--primary);
-        background: #eff6ff;
-    }
-
-    .feedback {
-        margin-top: 1rem;
-        padding: 1rem;
-        border-radius: 6px;
-    }
-
-    .feedback.correct {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .feedback:not(.correct) {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .explanation {
-        margin-top: 0.5rem;
-        font-size: 0.875rem;
-        opacity: 0.9;
-    }
-</style>
+        {#if showFeedback}
+            <div class={`mt-4 p-4 rounded-md text-sm ${selectedOption === quiz.correctAnswer ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                <p class="font-semibold mb-1">
+                    {selectedOption === quiz.correctAnswer ? "✅ Correct!" : "❌ Incorrect."}
+                </p>
+                <p>The correct answer is <strong>{quiz.correctAnswer}</strong>.</p>
+                <p class="mt-2 opacity-90">{quiz.explanation}</p>
+            </div>
+        {/if}
+    </Card.Content>
+</Card.Root>

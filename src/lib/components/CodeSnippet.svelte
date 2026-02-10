@@ -1,54 +1,21 @@
 <script lang="ts">
     import type { CodeSnippet } from "$lib/types";
+    import { cn } from "$lib/utils";
+    
     let { snippet }: { snippet: CodeSnippet } = $props();
 </script>
 
-<div class="code-fragment">
-    <div class="fragment-header">
-        <span class="file-path">{snippet.filePath}</span>
-        <span class="lang-tag">{snippet.language}</span>
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm my-4 overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-2 bg-muted/50 border-b">
+        <span class="text-xs font-mono text-muted-foreground">{snippet.filePath}</span>
+        <span class="text-xs font-semibold uppercase text-muted-foreground/70">{snippet.language}</span>
     </div>
-    <pre><code>{snippet.code}</code></pre>
-    <p class="explanation">{snippet.explanation}</p>
+    <div class="relative">
+        <pre class="p-4 overflow-x-auto text-sm font-mono bg-[#0f172a] text-gray-50 m-0"><code>{snippet.code}</code></pre>
+    </div>
+    {#if snippet.explanation}
+        <div class="p-4 bg-muted/20 border-t text-sm text-muted-foreground">
+            {snippet.explanation}
+        </div>
+    {/if}
 </div>
-
-<style>
-    .code-fragment {
-        background: #0f172a;
-        border-radius: 8px;
-        margin: 1rem 0;
-        overflow: hidden;
-        color: #e2e8f0;
-    }
-
-    .fragment-header {
-        background: #1e293b;
-        padding: 0.5rem 1rem;
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.75rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    pre {
-        padding: 1rem;
-        margin: 0;
-        overflow-x: auto;
-        font-family: "JetBrains Mono", "Fira Code", monospace;
-        font-size: 0.875rem;
-    }
-
-    .explanation {
-        padding: 1rem;
-        background: rgba(255, 255, 255, 0.05);
-        margin: 0;
-        font-size: 0.875rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        color: #94a3b8;
-    }
-
-    .lang-tag {
-        text-transform: uppercase;
-        opacity: 0.6;
-    }
-</style>

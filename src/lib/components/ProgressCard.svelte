@@ -1,5 +1,6 @@
 <script lang="ts">
     import LoadingSpinner from "./LoadingSpinner.svelte";
+    import * as Card from "$lib/components/ui/card";
 
     interface Props {
         repoUrl: string;
@@ -11,36 +12,13 @@
     let displayName = $derived(repoUrl.replace("https://github.com/", ""));
 </script>
 
-<section class="card progress-card">
-    <div class="progress-header">
-        <h2>Analyzing {displayName}</h2>
-        <p>This may take up to a minute...</p>
-    </div>
-    <div class="loading-state centered">
-        <LoadingSpinner size={24} color="var(--primary)" />
-        <span class="status-text">{loadingStatus || "Initializing..."}</span>
-    </div>
-</section>
-
-<style>
-    .progress-card {
-        text-align: center;
-        padding: 3rem;
-    }
-
-    .progress-header h2 {
-        margin: 0 0 0.5rem;
-        font-size: 1.5rem;
-        color: var(--text-heading);
-    }
-
-    .progress-header p {
-        color: var(--text-muted);
-        margin: 0;
-    }
-
-    .status-text {
-        font-weight: 500;
-        color: var(--primary);
-    }
-</style>
+<Card.Root class="text-center p-12">
+    <Card.Header>
+        <Card.Title class="text-2xl">Analyzing {displayName}</Card.Title>
+        <Card.Description>This may take up to a minute...</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col items-center justify-center gap-4 py-8">
+        <LoadingSpinner size={32} color="hsl(var(--primary))" />
+        <span class="font-medium text-primary animate-pulse">{loadingStatus || "Initializing..."}</span>
+    </Card.Content>
+</Card.Root>

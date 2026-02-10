@@ -1,15 +1,21 @@
 <script lang="ts">
     import { untrack } from "svelte";
+    import { cn } from "$lib/utils";
     import type { CodingExercise } from "$lib/types";
     import { getRuntime, isLanguageSupported } from "$lib/runtime/registry";
+    
+    import * as Card from "$lib/components/ui/card";
+    import { Button } from "$lib/components/ui/button";
+    import { Textarea } from "$lib/components/ui/textarea";
+    import { Badge } from "$lib/components/ui/badge";
+    import { Separator } from "$lib/components/ui/separator";
+    import LoadingSpinner from "./LoadingSpinner.svelte";
 
     let { exercise }: { exercise: CodingExercise } = $props();
 
     let userCode = $state(untrack(() => exercise.boilerplate));
     let output = $state<string[]>([]);
-    let status = $state<"idle" | "running" | "success" | "error" | "loading">(
-        "idle",
-    );
+    let status = $state<"idle" | "running" | "success" | "error" | "loading">("idle");
     let aiHint = $state("");
     let analyzingError = $state(false);
 
@@ -24,27 +30,19 @@
         const runtime = getRuntime(exercise.language);
         if (!runtime) {
             status = "error";
-            output = [
-                `❌ Execution failed: No runtime found for '${exercise.language}'`,
-            ];
+            output = [`❌ Execution failed: No runtime found for '${exercise.language}'`];
             return;
         }
 
         try {
             if (runtime.load) {
                 status = "loading";
-                output = [
-                    ...output,
-                    `📦 Loading ${exercise.language} runtime...`,
-                ];
+                output = [...output, `📦 Loading ${exercise.language} runtime...`];
                 await runtime.load();
             }
 
             status = "running";
-            const result = await runtime.run(
-                userCode,
-                exercise.validationScript,
-            );
+            const result = await runtime.run(userCode, exercise.validationScript);
 
             output = [...output, ...result.output];
             status = result.success ? "success" : "error";
@@ -94,203 +92,80 @@
     }
 </script>
 
-<div class="coding-exercise card">
-    <div class="exercise-header">
-        <h3>{exercise.title}</h3>
-        <div class="actions">
-            <button class="btn-secondary btn-sm" onclick={reset}>Reset</button>
-            <button
-                class="btn-primary btn-sm"
-                onclick={runCode}
+<Card.Root class="my-8 border-l-4 border-l-primary">
+    <Card.Header className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div class="space-y-1">
+            <Card.Title class="text-xl">{exercise.title}</Card.Title>
+            <Card.Description>{exercise.description}</Card.Description>
+        </div>
+        <div class="flex gap-2">
+            <Button variant="outline" size="sm" onclick={reset}>Reset</Button>
+            <Button 
+                size="sm" 
+                onclick={runCode} 
                 disabled={status === "running" || status === "loading"}
+                class="min-w-[120px]"
             >
                 {#if status === "loading"}
-                    Loading Pyodide...
+                    <LoadingSpinner size={16} color="currentColor" />
+                    <span class="ml-2">Loading...</span>
                 {:else if status === "running"}
-                    Running...
+                    <LoadingSpinner size={16} color="currentColor" />
+                    <span class="ml-2">Running...</span>
                 {:else}
                     Run & Check
                 {/if}
-            </button>
+            </Button>
         </div>
-    </div>
+    </Card.Header>
 
-    <p class="description">{exercise.description}</p>
-
-    <div class="editor-container">
-        <textarea
-            bind:value={userCode}
-            spellcheck="false"
-            class="code-editor"
-            placeholder="Type your code here..."
-        ></textarea>
-    </div>
-
-    {#if analyzingError}
-        <div class="ai-feedback loading">
-            <div class="feedback-header">🤖 AI Tutor</div>
-            Analyzing the error to provide a hint...
+    <Card.Content class="space-y-4 pt-4">
+        <div class="relative rounded-md border bg-muted/30">
+            <Textarea
+                bind:value={userCode}
+                spellcheck="false"
+                class="min-h-[200px] font-mono text-sm bg-transparent border-0 focus-visible:ring-0 resize-y p-4"
+                placeholder="Type your code here..."
+            />
         </div>
-    {:else if aiHint}
-        <div class="ai-feedback">
-            <div class="feedback-header">🤖 AI Tutor Hint</div>
-            <p>{aiHint}</p>
-        </div>
-    {/if}
 
-    {#if output.length > 0}
-        <div class="console-output {status}">
-            <div class="console-header">Console Output</div>
-            <div class="console-lines">
-                {#each output as line}
-                    <div class="line">{line}</div>
-                {/each}
+        {#if analyzingError}
+            <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 text-primary animate-in fade-in slide-in-from-bottom-2">
+                <div class="flex items-center gap-2 font-semibold text-xs uppercase mb-1">
+                    <LoadingSpinner size={12} color="currentColor" />
+                    AI Tutor
+                </div>
+                <p class="text-sm italic">Analyzing the error to provide a hint...</p>
             </div>
-        </div>
-    {/if}
-</div>
+        {:else if aiHint}
+            <div class="rounded-lg border border-purple-200 bg-purple-50 p-4 text-purple-900 animate-in fade-in slide-in-from-bottom-2 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-100">
+                <div class="font-semibold text-xs uppercase mb-1 flex items-center gap-2">
+                    🤖 AI Tutor Hint
+                </div>
+                <p class="text-sm border-l-2 border-purple-300 pl-3 ml-1">{aiHint}</p>
+            </div>
+        {/if}
 
-<style>
-    .coding-exercise {
-        margin-bottom: 2rem;
-        padding: 1.5rem;
-        border-left: 4px solid var(--primary);
-    }
-
-    .exercise-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .exercise-header h3 {
-        margin: 0;
-        font-size: 1.25rem;
-    }
-
-    .actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .description {
-        color: var(--text-muted);
-        margin-bottom: 1.5rem;
-        line-height: 1.6;
-    }
-
-    .editor-container {
-        position: relative;
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid var(--border-color);
-        background: #1e1e1e;
-        margin-bottom: 1rem;
-    }
-
-    .code-editor {
-        width: 100%;
-        min-height: 200px;
-        background: transparent;
-        color: #d4d4d4;
-        font-family: "JetBrains Mono", "Fira Code", monospace;
-        font-size: 0.9rem;
-        padding: 1rem;
-        border: none;
-        resize: vertical;
-        outline: none;
-        line-height: 1.5;
-    }
-
-    .console-output {
-        background: #f8fafc;
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-        overflow: hidden;
-    }
-
-    .console-output.success {
-        border-color: #22c55e;
-        background: #f0fdf4;
-    }
-
-    .console-output.error {
-        border-color: #ef4444;
-        background: #fef2f2;
-    }
-
-    .console-header {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--text-muted);
-        padding: 0.5rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-        background: rgba(0, 0, 0, 0.02);
-    }
-
-    .console-lines {
-        padding: 1rem;
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.85rem;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-
-    .line {
-        margin-bottom: 0.25rem;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-
-    .success .line {
-        color: #166534;
-    }
-    .error .line {
-        color: #991b1b;
-    }
-
-    .btn-sm {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.85rem;
-    }
-
-    .ai-feedback {
-        margin-top: 1rem;
-        padding: 1rem;
-        background: #fdf4ff; /* Light purple/pinkish */
-        border: 1px solid #f0abfc;
-        border-radius: 8px;
-        color: #701a75;
-        animation: fadeIn 0.3s ease-in;
-    }
-
-    .ai-feedback.loading {
-        background: #f8fafc;
-        border-color: #e2e8f0;
-        color: #64748b;
-        font-style: italic;
-    }
-
-    .feedback-header {
-        font-weight: 700;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-5px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-</style>
+        {#if output.length > 0}
+            <div class={cn(
+                "rounded-lg border p-0 overflow-hidden text-sm",
+                status === "success" ? "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800" : 
+                status === "error" ? "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800" :
+                "bg-muted"
+            )}>
+                <div class="px-3 py-1.5 border-b text-xs font-semibold uppercase text-muted-foreground bg-black/5 dark:bg-white/5">
+                    Console Output
+                </div>
+                <div class="p-3 font-mono max-h-[200px] overflow-y-auto space-y-1">
+                    {#each output as line}
+                        <div class={cn(
+                            "break-all whitespace-pre-wrap",
+                            status === "success" && "text-green-700 dark:text-green-300",
+                            status === "error" && "text-red-700 dark:text-red-300"
+                        )}>{line}</div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+    </Card.Content>
+</Card.Root>

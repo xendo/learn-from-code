@@ -1,9 +1,10 @@
 <script lang="ts">
-    let { size = 20, color = "currentColor" } = $props();
+    import { cn } from "$lib/utils";
+    let { size = 20, color = "currentColor", class: className } = $props();
 </script>
 
 <svg
-    class="spinner"
+    class={cn("spinner", className)}
     width={size}
     height={size}
     viewBox="0 0 50 50"

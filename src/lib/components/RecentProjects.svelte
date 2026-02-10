@@ -1,4 +1,6 @@
 <script lang="ts">
+    import * as Card from "$lib/components/ui/card";
+
     interface RecentProject {
         projectName: string;
         description: string;
@@ -16,81 +18,32 @@
 </script>
 
 {#if projects.length > 0}
-    <section class="recent-explorations">
-        <div class="section-header">
-            <h2>
-                {hasCurriculum
-                    ? "Explore Other Projects"
-                    : "Recent Explorations"}
+    <section class="space-y-6">
+        <div class="space-y-1">
+            <h2 class="text-2xl font-bold tracking-tight">
+                {hasCurriculum ? "Explore Other Projects" : "Recent Explorations"}
             </h2>
-            <p>Jump back into previously analyzed projects.</p>
+            <p class="text-muted-foreground">Jump back into previously analyzed projects.</p>
         </div>
-        <div class="recent-grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {#each projects as project}
-                <button
-                    class="card recent-card"
+                <button 
+                    class="text-left h-full w-full group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
                     onclick={() => onSelect(project.repoUrl)}
                 >
-                    <h3>{project.projectName}</h3>
-                    <p>{project.description}</p>
-                    <span class="repo-link">{project.repoUrl}</span>
+                    <Card.Root class="h-full hover:border-primary/50 hover:shadow-md transition-all duration-200">
+                        <Card.Header>
+                            <Card.Title class="text-lg group-hover:text-primary transition-colors">{project.projectName}</Card.Title>
+                        </Card.Header>
+                        <Card.Content>
+                            <Card.Description class="line-clamp-2 mb-4">{project.description}</Card.Description>
+                            <div class="text-xs text-muted-foreground font-mono break-all opacity-80 bg-muted/50 p-1.5 rounded">
+                                {project.repoUrl}
+                            </div>
+                        </Card.Content>
+                    </Card.Root>
                 </button>
             {/each}
         </div>
     </section>
 {/if}
-
-<style>
-    .recent-explorations {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .recent-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .recent-card {
-        text-align: left;
-        transition:
-            transform 0.2s,
-            box-shadow 0.2s;
-        cursor: pointer;
-        border: 1px solid var(--border-color);
-    }
-
-    .recent-card:hover {
-        transform: translateY(-2px);
-        box-shadow:
-            0 4px 6px -1px rgb(0 0 0 / 0.1),
-            0 2px 4px -2px rgb(0 0 0 / 0.1);
-        border-color: var(--primary);
-    }
-
-    .recent-card h3 {
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-        font-size: 1.125rem;
-    }
-
-    .recent-card p {
-        font-size: 0.875rem;
-        color: var(--text-muted);
-        margin-bottom: 1rem;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .repo-link {
-        font-size: 0.75rem;
-        color: var(--primary);
-        opacity: 0.8;
-        word-break: break-all;
-    }
-</style>

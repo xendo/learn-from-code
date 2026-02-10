@@ -1,6 +1,9 @@
 <script lang="ts">
     import type { Curriculum } from "$lib/types";
     import LessonView from "./LessonView.svelte";
+    import * as Card from "$lib/components/ui/card";
+    import { Badge } from "$lib/components/ui/badge";
+    import { Separator } from "$lib/components/ui/separator";
 
     interface Props {
         curriculum: Curriculum;
@@ -10,105 +13,50 @@
     let { curriculum, fileTree }: Props = $props();
 </script>
 
-<main class="curriculum-view">
-    <section class="card overview">
-        <h2>{curriculum.projectName}</h2>
-        <p>{curriculum.description}</p>
-        <div class="patterns">
-            <h3>Core Coding Patterns</h3>
-            <div class="tag-cloud">
-                {#each curriculum.patterns as pattern}
-                    <span class="tag">{pattern}</span>
-                {/each}
+<main class="flex flex-col gap-8">
+    <Card.Root>
+        <Card.Header>
+            <Card.Title class="text-3xl">{curriculum.projectName}</Card.Title>
+            <Card.Description class="text-base mt-2">{curriculum.description}</Card.Description>
+        </Card.Header>
+        <Card.Content>
+            <div class="space-y-4">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold">Core Coding Patterns</h3>
+                    <Separator class="flex-1" />
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    {#each curriculum.patterns as pattern}
+                        <Badge variant="secondary" class="text-sm px-3 py-1">{pattern}</Badge>
+                    {/each}
+                </div>
             </div>
-        </div>
-    </section>
+        </Card.Content>
+    </Card.Root>
 
-    <section class="lessons">
+    <section class="flex flex-col gap-8">
         {#each curriculum.lessons as lesson}
             <LessonView {lesson} />
         {/each}
     </section>
+
+    {#if fileTree.length > 0}
+        <Card.Root>
+            <Card.Header>
+                <Card.Title>Project Taxonomy</Card.Title>
+            </Card.Header>
+            <Card.Content>
+                <div class="max-h-[300px] overflow-y-auto rounded-md border p-4 bg-muted/30 font-mono text-sm">
+                    <ul class="space-y-2">
+                        {#each fileTree as node}
+                            <li class="flex items-center gap-2">
+                                <span class="opacity-70">{node.isDirectory ? "📁" : "📄"}</span>
+                                <span>{node.name}</span>
+                            </li>
+                        {/each}
+                    </ul>
+                </div>
+            </Card.Content>
+        </Card.Root>
+    {/if}
 </main>
-
-{#if fileTree.length > 0}
-    <section class="card results">
-        <h2>Project Taxonomy</h2>
-        <div class="tree-preview">
-            <ul>
-                {#each fileTree as node}
-                    <li>
-                        <span class="icon"
-                            >{node.isDirectory ? "📁" : "📄"}</span
-                        >
-                        {node.name}
-                    </li>
-                {/each}
-            </ul>
-        </div>
-    </section>
-{/if}
-
-<style>
-    .curriculum-view {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }
-
-    .overview h2 {
-        margin-top: 0;
-    }
-
-    .patterns {
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-color);
-    }
-
-    .tag-cloud {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-    }
-
-    .tag {
-        background: #eff6ff;
-        color: var(--primary);
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-
-    .lessons {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }
-
-    .tree-preview {
-        max-height: 300px;
-        overflow-y: auto;
-        font-family: "JetBrains Mono", "Fira Code", monospace;
-        font-size: 0.875rem;
-        padding: 0.5rem;
-    }
-
-    ul {
-        list-style: none;
-        padding-left: 0;
-    }
-
-    li {
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .icon {
-        opacity: 0.6;
-    }
-</style>
