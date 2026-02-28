@@ -9,7 +9,10 @@ const config = {
 
 	kit: {
 		// svelte-adapter-bun creates a Bun-optimized server
-		adapter: adapter()
+		adapter: adapter(),
+		csrf: {
+			trustedOrigins: ['https://learnfromcode.org']
+		}
 	}
 };
 
