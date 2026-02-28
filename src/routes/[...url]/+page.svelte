@@ -21,8 +21,14 @@
   }
 
   // State
-  // State
-  const initialUrl = $page.url.searchParams.get("project") || "";
+  const getFullRepoUrl = (path: string | undefined) => {
+    if (!path) return "";
+    if (path.startsWith("http")) return path;
+    if (path.startsWith("github.com/")) return `https://${path}`;
+    return `https://github.com/${path}`;
+  };
+
+  const initialUrl = getFullRepoUrl($page.params.url);
   let repoUrl = $state(initialUrl);
   let isGenerating = $state(!!initialUrl);
   let loadingStatus = $state(initialUrl ? "Initializing..." : "");
@@ -32,7 +38,8 @@
   let recentProjects = $state<RecentProject[]>([]);
 
   // Derived state
-  let projectParam = $derived($page.url.searchParams.get("project"));
+  let urlParam = $derived($page.params.url);
+  let projectParam = $derived(getFullRepoUrl(urlParam));
   let session = $derived($page.data.session);
   let showProgressCard = $state(false);
 
@@ -74,7 +81,11 @@
   function handleGenerate(url?: string) {
     const targetUrl = url || repoUrl;
     if (!targetUrl) return;
-    goto(`?project=${encodeURIComponent(targetUrl)}`);
+    
+    let cleanUrl = targetUrl.replace(/^https?:\/\//, "");
+    cleanUrl = cleanUrl.replace(/^github\.com\//, "");
+    
+    goto(`/${cleanUrl}`);
   }
 
   async function loadProject(url: string) {
@@ -112,7 +123,7 @@
 <div class="container landing">
   <header class="hero">
     <button class="logo" onclick={() => goto("/")}>Learn from Code</button>
-    <p>Turn any GitHub repository into a step-by-step learning journey.</p>
+    <p>Turn any GitHub repository into a learning curriculum.</p>
 
     <div class="auth-actions">
       {#if session}

@@ -1,12 +1,13 @@
-import { json } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { cloneRepo, getLatestCommitHash } from '$lib/analysis/git';
 import { scanDirectory } from '$lib/analysis/scanner';
 import { generateCurriculum } from '$lib/curriculum/generator';
 import { getCachedCurriculum, setCachedCurriculum } from '$lib/curriculum/cache';
 import { env } from '$env/dynamic/private';
 import { logApi, logError } from '$lib/logging';
+import { lockManager } from '$lib/services/lockManager';
 
-export const POST = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
     const { repoUrl } = await request.json();
     logApi('info', 'Generation request received', { repoUrl });
 
@@ -38,9 +39,32 @@ export const POST = async ({ request, locals }) => {
                 }
             };
 
+            const locked = !(await lockManager.tryAcquire(repoUrl));
+            if (locked) {
+                logApi('info', 'Project scan already in progress, subscribing to stream', { repoUrl });
+                let unsubscribe: (() => void) | undefined;
+                
+                const callback = (data: any) => {
+                    send(data);
+                    // Close stream if we got a terminal event
+                    if (data.curriculum || data.error) {
+                        if (unsubscribe) unsubscribe();
+                        try { controller.close(); } catch(e) {}
+                    }
+                };
+                
+                unsubscribe = await lockManager.subscribe(repoUrl, callback);
+                return;
+            }
+
+            const publishAndSend = (data: any) => {
+                lockManager.publish(repoUrl, data).catch(e => console.error('Publish error', e));
+                send(data);
+            };
+
             try {
                 // 1. Clone/Update repo
-                send({ status: '🔄 Cloning/Updating repository...' });
+                publishAndSend({ status: '🔄 Cloning/Updating repository...' });
                 const repoPath = await cloneRepo(repoUrl);
                 const commitHash = await getLatestCommitHash(repoPath);
                 logApi('info', 'Repository cloned', { repoUrl, commitHash });
@@ -49,38 +73,38 @@ export const POST = async ({ request, locals }) => {
                 const cached = getCachedCurriculum(repoUrl, commitHash);
                 if (cached) {
                     logApi('info', 'Serving from cache', { repoUrl });
-                    send({ status: '⚡ Found cached curriculum!' });
+                    publishAndSend({ status: '⚡ Found cached curriculum!' });
                     const fileTree = scanDirectory(repoPath);
                     if (!cached.repoUrl) cached.repoUrl = repoUrl;
 
-                    send({ curriculum: cached, fileTree, fromCache: true });
+                    publishAndSend({ curriculum: cached, fileTree, fromCache: true });
                     await new Promise(r => setTimeout(r, 100));
-                    controller.close();
+                    try { controller.close(); } catch(e) {}
                     return;
                 }
 
                 // 3. Auth Check
                 if (!session && env.DISABLE_AUTH !== 'true') {
                     logApi('warn', 'Unauthorized generation attempt', { repoUrl });
-                    send({ error: 'You must be signed in to generate new curriculums.', code: 401 });
-                    controller.close();
+                    publishAndSend({ error: 'You must be signed in to generate new curriculums.', code: 401 });
+                    try { controller.close(); } catch(e) {}
                     return;
                 }
 
                 // 4. Analysis & Generation
                 logApi('info', 'Starting generation', { repoUrl, user: session?.user?.name });
-                send({ status: '📂 Scanning file structure...' });
+                publishAndSend({ status: '📂 Scanning file structure...' });
                 const fileTree = scanDirectory(repoPath);
 
                 const curriculum = await generateCurriculum(repoPath, repoUrl, (msg) => {
-                    send({ status: msg });
+                    publishAndSend({ status: msg });
                 });
 
                 // 5. Save Cache
                 setCachedCurriculum(repoUrl, curriculum, commitHash);
                 logApi('info', 'Generation complete', { repoUrl, projectName: curriculum.projectName });
 
-                send({ curriculum, fileTree, fromCache: false });
+                publishAndSend({ curriculum, fileTree, fromCache: false });
 
             } catch (e: any) {
                 logError('API', `Generation failed for ${repoUrl}`, e);
@@ -92,9 +116,10 @@ export const POST = async ({ request, locals }) => {
                     statusCode = 429;
                 }
 
-                send({ error: errorMsg, code: statusCode });
+                publishAndSend({ error: errorMsg, code: statusCode });
             } finally {
-                controller.close();
+                await lockManager.release(repoUrl);
+                try { controller.close(); } catch(e) {}
             }
         }
     });
