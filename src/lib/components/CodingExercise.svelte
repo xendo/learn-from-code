@@ -104,19 +104,24 @@
 
 <Card.Root class="my-8 border-l-4 border-l-primary">
     <Card.Header
-        class="flex flex-row items-start justify-between space-y-0 pb-2"
+        class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 pb-4"
     >
         <div class="space-y-1">
             <Card.Title class="text-xl">{exercise.title}</Card.Title>
             <Card.Description>{exercise.description}</Card.Description>
         </div>
-        <div class="flex gap-2">
-            <Button variant="outline" size="sm" onclick={reset}>Reset</Button>
+        <div class="flex gap-2 w-full sm:w-auto">
+            <Button
+                variant="outline"
+                size="sm"
+                class="flex-1 sm:flex-none"
+                onclick={reset}>Reset</Button
+            >
             <Button
                 size="sm"
                 onclick={runCode}
                 disabled={status === "running" || status === "loading"}
-                class="min-w-[120px]"
+                class="min-w-[120px] flex-1 sm:flex-none"
             >
                 {#if status === "loading"}
                     <LoadingSpinner size={16} color="currentColor" class="" />
