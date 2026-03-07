@@ -230,8 +230,8 @@ export async function generateCurriculum(repoPath: string, repoUrl: string, onPr
          - Ensure the boilerplate code is valid C (e.g., if function returns int, return 0).
          - REQUIRED: If a test fails, \`printf("❌ Test Failed: Input %d, Expected %d, Got %d\\n", ...)\` BEFORE returning 1.
     6. PYTHON/JS SUPPORT:
-       - For Python: Use \`print(f"❌ Test Failed: ...")\` before \`assert\`.
-       - For JS: Use \`console.log("❌ Test Failed: ...")\` before throwing error.
+       - For Python: MUST use descriptive messages in assertions (e.g., \`assert result == expected, f'Expected {expected}, got {result}'\`).
+       - For JS: MUST include descriptive error messages in thrown errors.
     7. PATTERNS: Focus on architectural decisions found in the code.
     8. Focus on learning value, examples should be concise and self contained, but pack as much useful knowledge as possible.
     9. All questions should be specific to the project, not generic.

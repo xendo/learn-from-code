@@ -34,9 +34,47 @@ export class PythonRuntime implements CodeRunner {
             };
         } catch (e: any) {
             let errorMsg = e.message;
-            if (errorMsg.includes('AssertionError')) {
-                errorMsg = 'Test Assertion Failed.';
+
+            const lines = errorMsg.split('\n');
+            const filteredLines = [];
+            let tbStarted = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                if (line.startsWith('Traceback (most recent call last):')) {
+                    tbStarted = true;
+                    filteredLines.push(line);
+                    continue;
+                }
+
+                if (!tbStarted) {
+                    filteredLines.push(line);
+                    continue;
+                }
+
+                // If it's a frame header, check if it's internal
+                if (line.startsWith('  File "')) {
+                    const isInternal = line.includes('/lib/python') || line.includes('_pyodide') || line.includes('pyodide.js');
+                    if (isInternal) {
+                        // Skip this frame and its code snippet (indentated line)
+                        if (i + 1 < lines.length && lines[i + 1].startsWith('    ')) {
+                            i++;
+                        }
+                        continue;
+                    }
+                }
+
+                // Filter out specific garbage lines that Pyodide's internal frames often leave behind
+                if (line.includes('^^^^^') || line.includes('eval(self.code') || line.includes('await CodeRunner(')) {
+                    continue;
+                }
+
+                filteredLines.push(line);
             }
+
+            errorMsg = filteredLines.join('\n').trim();
+
             return {
                 success: false,
                 output: [...output],

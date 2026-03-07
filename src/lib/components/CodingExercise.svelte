@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { untrack } from "svelte";
+    import { untrack, tick } from "svelte";
     import { cn } from "$lib/utils";
     import type { CodingExercise } from "$lib/types";
     import { getRuntime, isLanguageSupported } from "$lib/runtime/registry";
@@ -93,6 +93,27 @@
         }
     }
 
+    async function handleKeydown(e: KeyboardEvent) {
+        const target = e.target as HTMLTextAreaElement;
+
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const start = target.selectionStart;
+            const end = target.selectionEnd;
+
+            userCode =
+                userCode.substring(0, start) + "    " + userCode.substring(end);
+
+            await tick();
+            target.setSelectionRange(start + 4, start + 4);
+        }
+
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            runCode();
+        }
+    }
+
     function reset() {
         userCode = exercise.boilerplate;
         output = [];
@@ -102,7 +123,9 @@
     }
 </script>
 
-<Card.Root class="my-8 border-l-4 border-l-primary">
+<Card.Root
+    class="my-8 border-l-0 bg-transparent shadow-none sm:border-l-4 sm:bg-card sm:shadow-sm border-l-primary"
+>
     <Card.Header
         class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 pb-4"
     >
@@ -140,6 +163,7 @@
         <div class="relative rounded-md border bg-muted/30">
             <Textarea
                 bind:value={userCode}
+                onkeydown={handleKeydown}
                 spellcheck="false"
                 class="min-h-[200px] font-mono text-sm bg-transparent border-0 focus-visible:ring-0 resize-y p-4"
                 placeholder="Type your code here..."

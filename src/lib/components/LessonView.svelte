@@ -57,7 +57,9 @@
         {/if}
 
         {#if lesson.codingExercises && lesson.codingExercises.length > 0}
-            <div class="rounded-lg border bg-muted/40 p-4 sm:p-6 space-y-4">
+            <div
+                class="-mx-3 rounded-none border-x-0 bg-muted/40 p-0 sm:mx-0 sm:rounded-lg sm:border sm:p-6 space-y-4"
+            >
                 <div class="space-y-1">
                     <h2 class="text-xl font-bold tracking-tight">
                         Practice Tasks
