@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '$env/dynamic/private';
 import { logApi, logError } from '$lib/logging';
+import { rateLimiter } from '$lib/services/rateLimiter';
 
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || '');
 
@@ -14,6 +15,15 @@ export async function POST({ request, locals }) {
 
     const { exerciseTitle, exerciseDescription, userCode, errorOutput, language } = await request.json();
     logApi('info', 'Feedback requested', { exerciseTitle, language, user: session?.user?.name });
+
+    // Rate Limit Check (Global: 100 hints per hour)
+    const ONE_HOUR = 60 * 60 * 1000;
+    if (!rateLimiter.checkLimit('hints', 100, ONE_HOUR)) {
+        logApi('warn', 'Rate limit reached for hints');
+        return json({
+            feedback: "The AI Tutor is currently resting (Limit: 100 hints/hour). Try fixed current issue yourself or come back in a bit!"
+        }, { status: 429 });
+    }
 
     if (!env.GEMINI_API_KEY) {
         return json({ feedback: 'API Key not configured. Using fallback feedback: Check your syntax and logic.' }, { status: 200 });

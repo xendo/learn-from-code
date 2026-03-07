@@ -6,6 +6,7 @@ import { getCachedCurriculum, setCachedCurriculum } from '$lib/curriculum/cache'
 import { env } from '$env/dynamic/private';
 import { logApi, logError } from '$lib/logging';
 import { lockManager } from '$lib/services/lockManager';
+import { rateLimiter } from '$lib/services/rateLimiter';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     const { repoUrl } = await request.json();
@@ -101,8 +102,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     try { controller.close(); } catch (e) { }
                     return;
                 }
+                // 4. Rate Limit Check (Global: 10 scans per hour)
+                const ONE_HOUR = 60 * 60 * 1000;
+                if (!rateLimiter.checkLimit('scans', 10, ONE_HOUR)) {
+                    logApi('warn', 'Rate limit reached for scans', { repoUrl });
+                    publishAndSend({
+                        error: 'Global rate limit reached (10 scans/hour). Please try again in a bit or explore a cached project!',
+                        code: 429
+                    });
+                    try { controller.close(); } catch (e) { }
+                    return;
+                }
 
-                // 4. Analysis & Generation
+                // 5. Analysis & Generation
                 logApi('info', 'Starting generation', { repoUrl, user: session?.user?.name });
                 publishAndSend({ status: '📂 Scanning file structure...' });
                 const fileTree = scanDirectory(repoPath);
