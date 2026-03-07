@@ -18,7 +18,9 @@
         <Card.Description>This may take up to a minute...</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col items-center justify-center gap-4 py-8">
-        <LoadingSpinner size={32} color="hsl(var(--primary))" />
-        <span class="font-medium text-primary animate-pulse">{loadingStatus || "Initializing..."}</span>
+        <LoadingSpinner size={32} color="hsl(var(--primary))" class="" />
+        <span class="font-medium text-primary animate-pulse"
+            >{loadingStatus || "Initializing..."}</span
+        >
     </Card.Content>
 </Card.Root>

@@ -7,7 +7,10 @@
 		class: className,
 		children,
 		...restProps
-	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+	}: WithElementRef<
+		HTMLAttributes<HTMLDivElement>,
+		HTMLDivElement
+	> = $props();
 </script>
 
 <div
@@ -15,7 +18,7 @@
 	data-slot="card"
 	class={cn(
 		"bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
-		className
+		className,
 	)}
 	{...restProps}
 >

@@ -43,10 +43,14 @@ export async function loadProject(
         for (const line of lines) {
             if (!line.trim()) continue;
 
+            console.log("Stream received line:", line.substring(0, 100) + (line.length > 100 ? '...' : ''));
+
             try {
                 const data = JSON.parse(line);
 
-                if (data.status) {
+                if (data.ping) {
+                    continue; // Ignore keep-alive pings
+                } else if (data.status) {
                     onStatus(data.status);
                 } else if (data.error) {
                     onError(data.error, data.code);

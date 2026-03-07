@@ -18,7 +18,9 @@
     <Card.Content class="space-y-8">
         {#if lesson.highlights.length > 0}
             <div class="space-y-4">
-                <h4 class="text-lg font-semibold tracking-tight">Key Highlights</h4>
+                <h4 class="text-lg font-semibold tracking-tight">
+                    Key Highlights
+                </h4>
                 <Separator />
                 <ul class="list-disc pl-6 space-y-2 text-sm text-foreground/90">
                     {#each lesson.highlights as highlight}
@@ -30,7 +32,9 @@
 
         {#if lesson.codeFragments.length > 0}
             <div class="space-y-4">
-                <h4 class="text-lg font-semibold tracking-tight">Code Deep Dives</h4>
+                <h4 class="text-lg font-semibold tracking-tight">
+                    Code Deep Dives
+                </h4>
                 <div class="grid gap-4">
                     {#each lesson.codeFragments as snippet}
                         <CodeSnippet {snippet} />
@@ -41,10 +45,12 @@
 
         {#if lesson.quizzes.length > 0}
             <div class="space-y-4">
-                <h4 class="text-lg font-semibold tracking-tight">Quiz Your Knowledge</h4>
+                <h4 class="text-lg font-semibold tracking-tight">
+                    Quiz Your Knowledge
+                </h4>
                 <div class="grid gap-4">
                     {#each lesson.quizzes as quiz}
-                        <Quiz {quiz} />
+                        <Quiz {quiz} onComplete={() => {}} />
                     {/each}
                 </div>
             </div>
@@ -53,8 +59,12 @@
         {#if lesson.codingExercises && lesson.codingExercises.length > 0}
             <div class="rounded-lg border bg-muted/40 p-6 space-y-4">
                 <div class="space-y-1">
-                    <h2 class="text-xl font-bold tracking-tight">Practice Tasks</h2>
-                    <p class="text-sm text-muted-foreground">Apply what you've learned in the live sandbox.</p>
+                    <h2 class="text-xl font-bold tracking-tight">
+                        Practice Tasks
+                    </h2>
+                    <p class="text-sm text-muted-foreground">
+                        Apply what you've learned in the live sandbox.
+                    </p>
                 </div>
                 {#each lesson.codingExercises as exercise}
                     <CodingExerciseView {exercise} />
@@ -64,7 +74,9 @@
 
         {#if lesson.furtherReading.length > 0}
             <div class="space-y-4">
-                <h4 class="text-lg font-semibold tracking-tight">Further Reading</h4>
+                <h4 class="text-lg font-semibold tracking-tight">
+                    Further Reading
+                </h4>
                 <Separator />
                 <ul class="list-disc pl-6 space-y-2 text-sm">
                     {#each lesson.furtherReading as reading}

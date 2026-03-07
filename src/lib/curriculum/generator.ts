@@ -10,12 +10,13 @@ import { logGeneration, logError } from '$lib/logging';
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || '');
 // Prioritize newer models, fallback to stable
 const COMPATIBLE_MODELS = [
+  //'gemini-3.1-flash-lite-preview',
   'gemini-3-flash-preview',
   'gemini-2.5-flash-lite-preview',
 ];
 
-// Helper to keep context within limits (approx)
-const MAX_CONTEXT_CHARS = 100000;
+// Helper to keep context within limits (approx) - raised for large repositories like llm.c
+const MAX_CONTEXT_CHARS = 1000000;
 
 async function discoverContext(repoPath: string, repoUrl: string, onProgress?: (msg: string) => void): Promise<string> {
   const fileTree = scanDirectory(repoPath);
@@ -257,7 +258,7 @@ export async function generateCurriculum(repoPath: string, repoUrl: string, onPr
     return curriculum;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logError('GENERATION', `Curriculum generation failed for ${repoUrl}`, error instanceof Error ? error : undefined);
+    logError('GENERATION', `Curriculum generation failed for ${repoUrl}`, error instanceof Error ? error : undefined, { repoUrl });
     console.error('Error generating curriculum:', error);
     throw new Error('Failed to generate curriculum via AI');
   }

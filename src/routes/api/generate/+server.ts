@@ -43,16 +43,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             if (locked) {
                 logApi('info', 'Project scan already in progress, subscribing to stream', { repoUrl });
                 let unsubscribe: (() => void) | undefined;
-                
+
                 const callback = (data: any) => {
                     send(data);
                     // Close stream if we got a terminal event
                     if (data.curriculum || data.error) {
                         if (unsubscribe) unsubscribe();
-                        try { controller.close(); } catch(e) {}
+                        try { controller.close(); } catch (e) { }
                     }
                 };
-                
+
                 unsubscribe = await lockManager.subscribe(repoUrl, callback);
                 return;
             }
@@ -61,6 +61,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 lockManager.publish(repoUrl, data).catch(e => console.error('Publish error', e));
                 send(data);
             };
+
+            // Keep-alive to prevent timeout
+            const keepAlive = setInterval(() => {
+                if (!isStreamClosed) {
+                    send({ ping: true });
+                } else {
+                    clearInterval(keepAlive);
+                }
+            }, 5000);
 
             try {
                 // 1. Clone/Update repo
@@ -78,8 +87,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     if (!cached.repoUrl) cached.repoUrl = repoUrl;
 
                     publishAndSend({ curriculum: cached, fileTree, fromCache: true });
-                    await new Promise(r => setTimeout(r, 100));
-                    try { controller.close(); } catch(e) {}
+
+                    // Allow the stream client to receive the final message before we brutally close the controller
+                    await new Promise(r => setTimeout(r, 500));
+                    try { controller.close(); } catch (e) { }
                     return;
                 }
 
@@ -87,7 +98,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 if (!session && env.DISABLE_AUTH !== 'true') {
                     logApi('warn', 'Unauthorized generation attempt', { repoUrl });
                     publishAndSend({ error: 'You must be signed in to generate new curriculums.', code: 401 });
-                    try { controller.close(); } catch(e) {}
+                    try { controller.close(); } catch (e) { }
                     return;
                 }
 
@@ -107,7 +118,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 publishAndSend({ curriculum, fileTree, fromCache: false });
 
             } catch (e: any) {
-                logError('API', `Generation failed for ${repoUrl}`, e);
+                logError('API', `Generation failed for ${repoUrl}`, e, { repoUrl });
                 let errorMsg = e.message || 'An error occurred during generation';
                 let statusCode = 500;
 
@@ -118,8 +129,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
                 publishAndSend({ error: errorMsg, code: statusCode });
             } finally {
+                clearInterval(keepAlive);
                 await lockManager.release(repoUrl);
-                try { controller.close(); } catch(e) {}
+                try { controller.close(); } catch (e) { }
             }
         }
     });

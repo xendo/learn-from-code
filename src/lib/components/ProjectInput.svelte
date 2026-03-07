@@ -25,18 +25,22 @@
                 class="w-full"
             />
         </div>
-        
+
         <Tooltip.Provider>
             <Tooltip.Root>
                 <Tooltip.Trigger>
-                    <Button 
-                        onclick={onGenerate} 
+                    <Button
+                        onclick={onGenerate}
                         disabled={isGenerating}
                         class="min-w-[140px]"
                     >
                         {#if isGenerating}
                             <div class="flex items-center gap-2">
-                                <LoadingSpinner size={16} color="currentColor" />
+                                <LoadingSpinner
+                                    size={16}
+                                    color="currentColor"
+                                    class=""
+                                />
                                 <span>Initializing...</span>
                             </div>
                         {:else}
