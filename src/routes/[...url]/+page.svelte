@@ -81,10 +81,10 @@
   function handleGenerate(url?: string) {
     const targetUrl = url || repoUrl;
     if (!targetUrl) return;
-    
+
     let cleanUrl = targetUrl.replace(/^https?:\/\//, "");
     cleanUrl = cleanUrl.replace(/^github\.com\//, "");
-    
+
     goto(`/${cleanUrl}`);
   }
 
@@ -120,7 +120,7 @@
   }
 </script>
 
-<div class="container landing">
+<div class="container px-0 sm:px-4 landing">
   <header class="hero">
     <button class="logo" onclick={() => goto("/")}>Learn from Code</button>
     <p>Turn any GitHub repository into a learning curriculum.</p>

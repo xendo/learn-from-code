@@ -17,7 +17,9 @@
     <Card.Root>
         <Card.Header>
             <Card.Title class="text-3xl">{curriculum.projectName}</Card.Title>
-            <Card.Description class="text-base mt-2">{curriculum.description}</Card.Description>
+            <Card.Description class="text-base mt-2"
+                >{curriculum.description}</Card.Description
+            >
         </Card.Header>
         <Card.Content>
             <div class="space-y-4">
@@ -27,7 +29,9 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     {#each curriculum.patterns as pattern}
-                        <Badge variant="secondary" class="text-sm px-3 py-1">{pattern}</Badge>
+                        <Badge variant="secondary" class="text-sm px-3 py-1"
+                            >{pattern}</Badge
+                        >
                     {/each}
                 </div>
             </div>
@@ -46,11 +50,15 @@
                 <Card.Title>Project Taxonomy</Card.Title>
             </Card.Header>
             <Card.Content>
-                <div class="max-h-[300px] overflow-y-auto rounded-md border p-4 bg-muted/30 font-mono text-sm">
+                <div
+                    class="max-h-[300px] overflow-y-auto rounded-md border p-4 bg-muted/30 font-mono text-sm"
+                >
                     <ul class="space-y-2">
                         {#each fileTree as node}
                             <li class="flex items-center gap-2">
-                                <span class="opacity-70">{node.isDirectory ? "📁" : "📄"}</span>
+                                <span class="opacity-70"
+                                    >{node.isDirectory ? "📁" : "📄"}</span
+                                >
                                 <span>{node.name}</span>
                             </li>
                         {/each}
