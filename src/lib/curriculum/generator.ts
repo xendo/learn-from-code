@@ -10,7 +10,7 @@ import { logGeneration, logError } from '$lib/logging';
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || '');
 // Prioritize newer models, fallback to stable
 const COMPATIBLE_MODELS = [
-  //'gemini-3.1-flash-lite-preview',
+  'gemini-3.1-flash-lite-preview',
   'gemini-3-flash-preview',
   'gemini-2.5-flash-lite-preview',
 ];

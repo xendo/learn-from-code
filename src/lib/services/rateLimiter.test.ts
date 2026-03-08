@@ -1,4 +1,4 @@
-import { RateLimiter } from './src/lib/services/rateLimiter';
+import { RateLimiter } from './rateLimiter';
 
 const limiter = new RateLimiter();
 const key = 'test';
